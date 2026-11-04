@@ -29,11 +29,20 @@ def combine(cover_dir: Path, out: Path | None = None) -> Path:
     combined.paste(back,  (0, 0))           # back  → left
     combined.paste(front, (back.width, 0))  # front → right
 
-    dest = out or (cover_dir / "cover_combined.png")
-    combined.save(dest, format="PNG")
-    print(f"✓ Saved → {dest}")
+    png_dest = out or (cover_dir / "cover_combined.png")
+    combined.save(png_dest, format="PNG")
+    print(f"✓ PNG → {png_dest}")
+
+    try:
+        import img2pdf
+        pdf_dest = png_dest.with_suffix(".pdf")
+        pdf_dest.write_bytes(img2pdf.convert(str(png_dest)))
+        print(f"✓ PDF → {pdf_dest}")
+    except Exception as exc:
+        print(f"⚠ PDF export failed: {exc}")
+
     print(f"  Size: {combined_w} × {front.height} px")
-    return dest
+    return png_dest
 
 
 if __name__ == "__main__":
