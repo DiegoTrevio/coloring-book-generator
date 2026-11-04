@@ -43,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-cover",    action="store_true", help="Skip cover generation")
     p.add_argument("--skip-samples",  action="store_true", help="Skip colored-sample image generation")
     p.add_argument("--author",   default="",             help="Override author name in upload_details.txt")
-    p.add_argument("--model",    default="gpt-image-1",  help="OpenAI image model (default: gpt-image-1); use dall-e-3 if gpt-image-1 access is unavailable")
+    p.add_argument("--model",    default="gpt-image-2",  help="OpenAI image model (default: gpt-image-2); also supports gpt-image-1, dall-e-3")
     p.add_argument("--quality",  default="",             help="Image quality: low/medium/high (gpt-image-1) or standard/hd (dall-e-3); auto-set if omitted")
     p.add_argument("--size",     default="",             help="Image size; auto-set per model if omitted")
     p.add_argument("--workers",  type=int, default=3,    help="Concurrent generation threads (default: 3)")
