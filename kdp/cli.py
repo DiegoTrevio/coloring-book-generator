@@ -43,9 +43,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-cover",    action="store_true", help="Skip cover generation")
     p.add_argument("--skip-samples",  action="store_true", help="Skip colored-sample image generation")
     p.add_argument("--author",   default="",             help="Override author name in upload_details.txt")
-    p.add_argument("--model",    default="gpt-image-1",  help="OpenAI image model (default: gpt-image-1)")
-    p.add_argument("--quality",  default="medium",       choices=["low", "medium", "high"], help="Image quality")
-    p.add_argument("--size",     default="1024x1536",    help="Image size (default: 1024x1536)")
+    p.add_argument("--model",    default="gpt-image-1",  help="OpenAI image model (default: gpt-image-1); use dall-e-3 if gpt-image-1 access is unavailable")
+    p.add_argument("--quality",  default="",             help="Image quality: low/medium/high (gpt-image-1) or standard/hd (dall-e-3); auto-set if omitted")
+    p.add_argument("--size",     default="",             help="Image size; auto-set per model if omitted")
     p.add_argument("--workers",  type=int, default=3,    help="Concurrent generation threads (default: 3)")
     p.add_argument("--threshold",type=int, default=140,  help="B&W threshold 0-255 (default: 140)")
     p.add_argument("--dry-run",  action="store_true",    help="Parse, validate, write upload_details — no API calls")
@@ -267,6 +267,13 @@ def run(argv: list[str] | None = None) -> None:
     n = len(ideas)
 
     # ── Setup directories ─────────────────────────────────────────────────
+    # ── Model-specific defaults ───────────────────────────────────────────
+    _dalle = args.model.startswith("dall-e")
+    if not args.size:
+        args.size    = "1024x1792" if _dalle else "1024x1536"
+    if not args.quality:
+        args.quality = "standard"  if _dalle else "medium"
+
     out_root = Path(args.out)
     dirs     = setup_dirs(out_root, book.book_title)
     book_dir = dirs["book"]

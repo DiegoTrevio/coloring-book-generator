@@ -122,8 +122,9 @@ class ImageGenerator:
             log.debug("Edited %s -> %s", source_path.name, dest.name)
             return True
         except openai.BadRequestError as exc:
-            log.warning("Image edit not available for model %s: %s", self.model, exc)
-            return False
+            # dall-e-3 does not support images.edit — fall back to generate
+            log.warning("Image edit not supported by %s, falling back to generate: %s", self.model, exc)
+            return self.generate(prompt, dest, max_attempts=max_attempts)
         except Exception as exc:
             log.error("edit failed for %s: %s", dest.name, exc)
             return False
