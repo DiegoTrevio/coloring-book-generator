@@ -48,8 +48,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--size",     default="",             help="Image size; auto-set per model if omitted")
     p.add_argument("--workers",  type=int, default=3,    help="Concurrent generation threads (default: 3)")
     p.add_argument("--threshold",type=int, default=140,  help="B&W threshold 0-255 (default: 140)")
-    p.add_argument("--dry-run",  action="store_true",    help="Parse, validate, write upload_details — no API calls")
-    p.add_argument("--only-pdf", action="store_true",    help="Rebuild PDF and upload_details from existing images")
+    p.add_argument("--dry-run",   action="store_true",   help="Parse, validate, write upload_details — no API calls")
+    p.add_argument("--only-pdf",  action="store_true",   help="Rebuild PDF and upload_details from existing images")
+    p.add_argument("--only-cover",action="store_true",   help="Generate covers only (skip pages and PDF)")
     return p
 
 
@@ -303,7 +304,7 @@ def run(argv: list[str] | None = None) -> None:
     print(f"  Interior PDF: 2 + {n}×2 = {2 + 2*n} pages")
     print(f"  API calls:    ~{total_calls}  ({n} pages + {n_covers} covers + {n_samples} samples)")
     print(f"  Model:        {args.model}  size={args.size}  quality={args.quality}")
-    print(f"  Mode:         {'DRY-RUN' if args.dry_run else 'ONLY-PDF' if args.only_pdf else 'FULL'}")
+    print(f"  Mode:         {'DRY-RUN' if args.dry_run else 'ONLY-PDF' if args.only_pdf else 'ONLY-COVER' if args.only_cover else 'FULL'}")
     print(f"{'='*60}\n")
 
     if args.dry_run or args.only_pdf:
@@ -319,7 +320,7 @@ def run(argv: list[str] | None = None) -> None:
             return
         # only_pdf falls through to PDF builder below
 
-    if not (args.dry_run or args.only_pdf):
+    if not (args.dry_run or args.only_pdf or args.only_cover):
         if not args.yes:
             ans = input("Proceed? [y/N] ").strip().lower()
             if ans not in ("y", "yes"):
@@ -333,6 +334,17 @@ def run(argv: list[str] | None = None) -> None:
 
     manifest      = load_manifest(book_dir / "manifest.json")
     manifest_lock = threading.Lock()
+
+    # ── only-cover shortcut ───────────────────────────────────────────────
+    if args.only_cover:
+        print("\n[F] Generating covers only ...\n")
+        _generate_covers(
+            gen, book, dirs["cover"], dirs["raw"],
+            n_samples=4, manifest=manifest, skip_samples=args.skip_samples,
+        )
+        save_manifest(book_dir / "manifest.json", manifest)
+        print("\nCover generation complete.")
+        return
 
     # ── B. Generate interior pages ────────────────────────────────────────
     if not args.only_pdf:
