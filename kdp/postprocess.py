@@ -30,8 +30,10 @@ def process_page(
     """
     img = Image.open(raw_path).convert("L")
 
-    # Scale to fit drawing area preserving aspect ratio
-    img.thumbnail((DRAW_W, DRAW_H), Image.LANCZOS)
+    # Scale to fit drawing area preserving aspect ratio (thumbnail() only shrinks;
+    # resize() is needed here because raw images are smaller than the target canvas)
+    scale = min(DRAW_W / img.width, DRAW_H / img.height)
+    img = img.resize((round(img.width * scale), round(img.height * scale)), Image.LANCZOS)
 
     # Paste onto white canvas, centred
     canvas = Image.new("L", (PAGE_W_PX, PAGE_H_PX), 255)
