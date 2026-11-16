@@ -93,6 +93,9 @@ comprobación sin API, selección y PDF mediante pruebas automatizadas. No se ha
 probado esta ventana en una computadora Windows real ni se han generado nuevas
 ilustraciones pagadas durante esta actualización.
 
-Schnell no garantiza personajes recurrentes idénticos. La cubierta completa para
-imprenta y las historias con referencias visuales siguen requiriendo trabajo
-adicional; las cubiertas producidas son imágenes separadas.
+Schnell no garantiza personajes recurrentes idénticos. Las historias con referencias visuales siguen requiriendo trabajo adicional.
+Para unir las cubiertas separadas en un paquete de impresión, consulta IMPRESION_ES.md.
+
+## Paquete para impresión
+
+Usa el botón Preparar paquete de impresión después de revisar y seleccionar todas las páginas. Consulta IMPRESION_ES.md. La exportación reúne los archivos sin API y no sustituye la revisión en la imprenta.

@@ -1,3 +1,7 @@
+## Paquete para impresión
+
+El taller permite exportar interior, cubierta completa e informe técnico sin API. Consulta [la guía de impresión](IMPRESION_ES.md) para revisar el libro y usar las medidas de la calculadora oficial.
+
 ## Abrir una ventana en Windows
 
 Haz doble clic en **abrir_libros.bat** para configurar libros, escribir escenas, generar con Replicate y abrir la galería de opciones. Consulta [la guía de la ventana](VENTANA_ES.md). La generación consume API; comprobar y seleccionar imágenes existentes no.

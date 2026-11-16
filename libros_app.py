@@ -8,7 +8,7 @@ import subprocess
 import sys
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from kdp.book_config import BookConfig, STYLES, SUBJECT_RULES
 from kdp.project import BookProject, build_command, parse_scene_lines
@@ -104,6 +104,7 @@ class BooksApp:
         ttk.Label(review, text='Ejemplo: 1:2,4:3').pack(side='left', padx=8)
         ttk.Button(review, text='Abrir carpeta del libro', command=lambda: self.open_output()).pack(side='right')
         ttk.Label(generate, text='La comprobación y selección son gratis. Generar crea hasta dibujos × opciones, más cubiertas y reintentos.\nSchnell no garantiza anatomía correcta ni personajes idénticos entre escenas.', wraplength=1000).pack(anchor='w', pady=8)
+        ttk.Button(generate, text='Preparar paquete de impresión (sin API)', command=self.export_print).pack(anchor='w', pady=(0, 8))
         self.log = tk.Text(generate, height=17, wrap='word', state='disabled', font=('Consolas', 10))
         self.log.pack(fill='both', expand=True)
         ttk.Label(outer, textvariable=self.status, wraplength=1080).pack(anchor='w', pady=(10, 0))
@@ -256,6 +257,31 @@ class BooksApp:
         except queue.Empty:
             pass
         self.window.after(120, self.poll)
+
+    def export_print(self):
+        if self.running:
+            return
+        try:
+            if not self.project_paths:
+                raise ValueError('Abre un libro guardado primero.')
+            values = []
+            for label in ('Ancho del lomo', 'Ancho completo de cubierta', 'Alto completo de cubierta'):
+                value = simpledialog.askfloat('Medidas de la imprenta',
+                    label + ' en pulgadas, según la calculadora oficial para tu número final de páginas:',
+                    parent=self.window, minvalue=.001)
+                if value is None:
+                    return
+                values.append(value)
+            parent = filedialog.askdirectory(title='Elige dónde crear la carpeta paquete-impresion')
+            if not parent:
+                return
+            from kdp.print_package import export_package
+            result = export_package(*self.project_paths, spine=values[0], cover_width=values[1],
+                cover_height=values[2], destination=Path(parent)/'paquete-impresion')
+            self.status.set('Paquete preparado. Revisa LEEME.txt y report.json antes de publicar.')
+            open_local(result)
+        except Exception as exc:
+            self.error(exc)
 
     def close(self):
         if self.running:
