@@ -10,6 +10,7 @@ import img2pdf
 import pikepdf
 from PIL import Image, ImageDraw, ImageOps
 
+from .build_receipt import verify_receipt
 from .book_config import load_config
 from .parser import parse_book
 from .utils import sanitize_folder_name
@@ -35,6 +36,8 @@ def export_package(md_path: Path, config_path: Path, *, spine: float,
         if not (directory/'pages_clean'/idea.filename).is_file():
             raise ValueError(f'Falta el dibujo {idea.number}.')
     interior = directory/'interior'/f'{sanitize_folder_name(book.book_title)}_interior.pdf'
+    verify_receipt(interior, md_path, config_path,
+                   [directory/"pages_clean"/idea.filename for idea in book.page_ideas])
     expected_pages = 2 + 2*len(book.page_ideas) + (2 if config.completion_page else 0)
     if expected_pages < 24:
         raise ValueError('El interior tiene menos de 24 páginas. Completa el libro antes de preparar la edición de impresión.')

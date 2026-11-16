@@ -99,3 +99,7 @@ Para unir las cubiertas separadas en un paquete de impresión, consulta IMPRESIO
 ## Paquete para impresión
 
 Usa el botón Preparar paquete de impresión después de revisar y seleccionar todas las páginas. Consulta IMPRESION_ES.md. La exportación reúne los archivos sin API y no sustituye la revisión en la imprenta.
+
+## Comprobaciones automáticas
+
+GitHub Actions ejecuta las pruebas en Linux y Windows. En Windows también se prueba crear la ventana, guardar un libro y ejecutar una comprobación sin API. Consulta el resultado de los checks del pull request; no equivale a validar nuevas ilustraciones pagadas ni a probar todos los equipos Windows.

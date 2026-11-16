@@ -26,6 +26,9 @@ def fixture_book(tmp_path):
         pdf.save(root/'interior'/'Prueba impresión_interior.pdf')
     for name,color in [('front','blue'),('back','red')]:
         Image.new('RGB',(400,600),color).save(root/'cover'/f'{name}.png')
+    from kdp.build_receipt import write_receipt
+    write_receipt(root/'interior'/'Prueba impresión_interior.pdf', md, config,
+                  [root/'pages_clean'/idea.filename for idea in parse_book(md).page_ideas])
     return md,config,root
 
 
@@ -53,3 +56,11 @@ def test_blocks_unreviewed_pages_and_wrong_dimensions(tmp_path):
     with pytest.raises(ValueError,match='revisión visual'):
         export_package(md,config,spine=.06,cover_width=17.31,cover_height=11.25,destination=tmp_path/'bad')
     assert not (tmp_path/'bad').exists()
+
+
+def test_blocks_changed_config_or_drawing_until_rebuild(tmp_path):
+    md,config,root = fixture_book(tmp_path)
+    data=json.loads(config.read_text()); data['completion_page']=True
+    config.write_text(json.dumps(data))
+    with pytest.raises(ValueError,match='desactualizado'):
+        export_package(md,config,spine=.06,cover_width=17.31,cover_height=11.25,destination=tmp_path/'bad')

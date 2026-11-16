@@ -64,3 +64,7 @@ Fuentes oficiales:
 
 Sustituye las tres medidas por números en pulgadas con punto decimal. La función
 no hace solicitudes a Replicate ni publica archivos en Amazon.
+
+## Control de versión del PDF
+
+Cada reconstrucción guarda un registro `.build.json` junto al interior. La exportación comprueba los hashes del PDF, Markdown, perfil y páginas procesadas. Si cambias alguno o usas una versión antigua sin registro, reconstruye el PDF antes de exportar. No copies el registro de otro libro.

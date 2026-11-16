@@ -14,6 +14,7 @@ from pathlib import Path
 import openai
 from dotenv import load_dotenv
 
+from .build_receipt import write_receipt
 from .cover_layout import layout_covers
 from .book_config import BookConfig, load_config
 from .review import write_review
@@ -493,6 +494,8 @@ def run(argv: list[str] | None = None) -> None:
     total_pages = build_pdf(dirs["clean"], interior_pdf, [idea.filename for idea in ideas],
                             language=config.language if args.config else ("es" if book.language.lower() in ("spanish", "español", "es") else "en"),
                             title=book.book_title, completion_page=config.completion_page)
+    write_receipt(interior_pdf, md_path, args.config,
+                  [dirs["clean"] / idea.filename for idea in ideas])
     print(f"  Interior PDF: {interior_pdf}")
     print(f"  Total pages:  {total_pages}  ({'even ✓' if total_pages % 2 == 0 else 'ODD ✗'})")
 
