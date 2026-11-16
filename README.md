@@ -1,3 +1,7 @@
+## Libros de cualquier temática
+
+Consulta [la guía editorial](EDITORIAL_ES.md): perfiles para edades y estilos, tres ejemplos (personas, animales y vehículos), candidatos comparables, revisión local y maquetación en español.
+
 ## Usar FLUX.1 Schnell con Replicate
 
 Consulta [la guía en español](SCHNELL_ES.md) para instalar en Windows y generar un libro de 30 dibujos. Usa `--provider replicate`; requiere `REPLICATE_API_TOKEN`, sin clave de OpenAI.

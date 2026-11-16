@@ -17,7 +17,7 @@ log = logging.getLogger("kdp")
 
 _QA_CORRECTIONS: dict[str, str] = {
     "grey":       "Use only pure black outlines on a plain white background — no grey shading, no fills.",
-    "too_empty":  "Add much more detail: more outlines, patterns, and elements to fill the page richly.",
+    "too_empty":  "Make the main subject larger with clear bold outlines and large enclosed coloring spaces. Keep the requested age and complexity; do not add tiny patterns.",
     "too_filled": "Use thinner outlines with open areas so children can colour it in — no solid fills.",
     "cropped":    "The whole illustration must fit inside the page with wide white margins on every side.",
     "background": "Plain white background only — no textures, gradients, or patterns behind the drawing.",

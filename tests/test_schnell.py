@@ -63,9 +63,12 @@ def test_replicate_key_does_not_require_openai(tmp_path, monkeypatch):
 
 def test_style_reaches_generator_even_on_regeneration(tmp_path):
     gen = Mock()
-    gen.generate.return_value = True
+    def generate(prompt, dest, **kwargs):
+        dest.write_bytes(png_bytes())
+        return True
+    gen.generate.side_effect = generate
     manifest = {'pages': {'01': {'status': 'ok'}}, 'stats': {}}
-    with patch('kdp.cli.check_image', return_value=SimpleNamespace(ok=True)), patch('kdp.cli.process_page'):
+    with patch('kdp.cli.check_image', return_value=SimpleNamespace(ok=True, flags=[], dark_pct=5., midtone_pct=0.)), patch('kdp.cli.process_page'):
         _generate_and_qa(PageIdea(1, 'puppy'), gen, tmp_path, tmp_path,
                          manifest, threading.Lock(), 140, True, 'BOLD OUTLINES')
     assert gen.generate.call_args.kwargs['prompt'].startswith('BOLD OUTLINES')
@@ -93,7 +96,7 @@ def test_pipeline_builds_pdf_with_fake_provider(tmp_path):
          patch('kdp.cli.SchnellGenerator') as provider:
         provider.return_value.generate.side_effect = generate
         run([str(EXAMPLE), '--provider', 'replicate', '--limit', '1', '--skip-cover',
-             '--yes', '--out', str(tmp_path)])
+             '--yes', '--allow-review', '--out', str(tmp_path)])
     pdfs = list(tmp_path.rglob('*_interior.pdf'))
     assert len(pdfs) == 1
     assert pdfs[0].read_bytes().startswith(b'%PDF-')
