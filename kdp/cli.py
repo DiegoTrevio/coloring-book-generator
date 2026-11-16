@@ -13,7 +13,7 @@ import openai
 from dotenv import load_dotenv
 
 from .details_writer import validate, write_upload_details
-from .generator import ImageGenerator
+from .generator import ImageGenerator, SchnellGenerator
 from .parser import KDPBook, PageIdea, parse_book
 from .pdf_builder import build_pdf
 from .postprocess import process_page
@@ -43,6 +43,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--skip-cover",    action="store_true", help="Skip cover generation")
     p.add_argument("--skip-samples",  action="store_true", help="Skip colored-sample image generation")
     p.add_argument("--author",   default="",             help="Override author name in upload_details.txt")
+    p.add_argument("--provider", choices=("openai", "replicate"), default="openai", help="Image provider; replicate uses FLUX.1 Schnell")
+    p.add_argument("--aspect-ratio", choices=("1:1", "2:3", "3:4", "4:5", "9:16"), default="3:4", help="Schnell aspect ratio (default: 3:4)")
     p.add_argument("--model",    default="gpt-image-2",  help="OpenAI image model (default: gpt-image-2); also supports gpt-image-1, dall-e-3")
     p.add_argument("--quality",  default="",             help="Image quality: low/medium/high (gpt-image-1) or standard/hd (dall-e-3); auto-set if omitted")
     p.add_argument("--size",     default="",             help="Image size; auto-set per model if omitted")
@@ -56,14 +58,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 # ── API key loading ───────────────────────────────────────────────────────────
 
-def load_api_key(script_dir: Path) -> str:
+def load_api_key(script_dir: Path, provider: str = "openai") -> str:
     load_dotenv(script_dir / ".env")
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
+    variable = "REPLICATE_API_TOKEN" if provider == "replicate" else "OPENAI_API_KEY"
+    key = os.environ.get(variable, "").strip()
     if not key:
         sys.exit(
-            "ERROR: OPENAI_API_KEY is not set.\n"
+            f"ERROR: {variable} is not set.\n"
             "  Create a .env file next to kdp_book_builder.py with:\n"
-            "    OPENAI_API_KEY=sk-...\n"
+            f"    {variable}=your-token\n"
             "  or export the variable in your shell."
         )
     return key
@@ -101,6 +104,7 @@ def _generate_and_qa(
     manifest_lock: threading.Lock,
     threshold: int,
     force: bool,
+    style_prompt: str = "",
 ) -> tuple[str, str]:
     """
     Generate one page, run QA, retry up to _MAX_QA_RETRIES on failure.
@@ -117,8 +121,7 @@ def _generate_and_qa(
         log.info("  Page %s/%s — already OK, skipping", key, idea.idea[:40])
         return key, "ok"
 
-    style_prompt = page_data.get("style_prompt", "")
-    full_prompt  = page_data.get("prompt", style_prompt + f"\n\nCreate the coloring page for: {idea.idea}")
+    full_prompt = style_prompt + f"\n\nCreate the coloring page for: {idea.idea}"
 
     qa_flags: list[str] = []
     api_calls = 0
@@ -241,7 +244,17 @@ def _write_qa_report(book_dir: Path, manifest: dict) -> None:
 # ── Main run ──────────────────────────────────────────────────────────────────
 
 def run(argv: list[str] | None = None) -> None:
-    args    = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.provider == "replicate":
+        if args.size or args.quality:
+            parser.error("Schnell uses --aspect-ratio, not --size or --quality")
+        if args.model not in ("gpt-image-2", "black-forest-labs/flux-schnell"):
+            parser.error("--provider replicate supports only black-forest-labs/flux-schnell")
+        args.model = "black-forest-labs/flux-schnell"
+        args.skip_samples = True  # Schnell cannot color an existing drawing.
+    if args.workers < 1:
+        parser.error("--workers must be at least 1")
     md_path = Path(args.md_file).resolve()
 
     if not md_path.exists():
@@ -270,9 +283,9 @@ def run(argv: list[str] | None = None) -> None:
     # ── Setup directories ─────────────────────────────────────────────────
     # ── Model-specific defaults ───────────────────────────────────────────
     _dalle = args.model.startswith("dall-e")
-    if not args.size:
+    if not args.size and args.provider == "openai":
         args.size    = "1024x1792" if _dalle else "1024x1536"
-    if not args.quality:
+    if not args.quality and args.provider == "openai":
         args.quality = "standard"  if _dalle else "medium"
 
     out_root = Path(args.out)
@@ -303,7 +316,13 @@ def run(argv: list[str] | None = None) -> None:
     print(f"  Page ideas:   {n}  (total in file: {len(book.page_ideas)})")
     print(f"  Interior PDF: 2 + {n}×2 = {2 + 2*n} pages")
     print(f"  API calls:    ~{total_calls}  ({n} pages + {n_covers} covers + {n_samples} samples)")
-    print(f"  Model:        {args.model}  size={args.size}  quality={args.quality}")
+    print(f"  Provider:     {args.provider}")
+    print(f"  Model:        {args.model}")
+    if args.provider == "replicate":
+        print(f"  Aspect ratio: {args.aspect_ratio} (4 inference steps)")
+        print("  Colored samples disabled: Schnell does not support reference-image editing.")
+    else:
+        print(f"  Settings:     size={args.size}  quality={args.quality}")
     print(f"  Mode:         {'DRY-RUN' if args.dry_run else 'ONLY-PDF' if args.only_pdf else 'ONLY-COVER' if args.only_cover else 'FULL'}")
     print(f"{'='*60}\n")
 
@@ -328,9 +347,13 @@ def run(argv: list[str] | None = None) -> None:
 
     # ── Load API key & create client ──────────────────────────────────────
     if not args.only_pdf:
-        api_key = load_api_key(script_dir)
-        client  = openai.OpenAI(api_key=api_key)
-        gen     = ImageGenerator(client, model=args.model, size=args.size, quality=args.quality)
+        api_key = load_api_key(script_dir, args.provider)
+        if args.provider == "replicate":
+            import replicate
+            gen = SchnellGenerator(replicate.Client(api_token=api_key), args.aspect_ratio)
+        else:
+            client = openai.OpenAI(api_key=api_key)
+            gen = ImageGenerator(client, model=args.model, size=args.size, quality=args.quality)
 
     manifest      = load_manifest(book_dir / "manifest.json")
     manifest_lock = threading.Lock()
@@ -359,7 +382,7 @@ def run(argv: list[str] | None = None) -> None:
                     idea, gen,
                     dirs["raw"], dirs["clean"],
                     manifest, manifest_lock,
-                    args.threshold, force,
+                    args.threshold, force, book.master_style_prompt,
                 )
                 futures[f] = idea
 
