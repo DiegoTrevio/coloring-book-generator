@@ -434,6 +434,9 @@ def run(argv: list[str] | None = None) -> None:
                     key, status = done.result()
                     icon = "✓" if status == "ok" else ("⚠" if status == "needs_review" else "✗")
                     print(f"  {icon} Page {key}: {status}")
+                    # Save each completed page, rather than waiting for the book.
+                    with manifest_lock:
+                        save_manifest(book_dir / "manifest.json", manifest)
                 except Exception as exc:
                     log.error("Unexpected error on page %s: %s", idea.number, exc)
                     manifest['pages'][f'{idea.number:02d}'] = {

@@ -1,3 +1,7 @@
+## Abrir una ventana en Windows
+
+Haz doble clic en **abrir_libros.bat** para configurar libros, escribir escenas, generar con Replicate y abrir la galería de opciones. Consulta [la guía de la ventana](VENTANA_ES.md). La generación consume API; comprobar y seleccionar imágenes existentes no.
+
 ## Libros de cualquier temática
 
 Consulta [la guía editorial](EDITORIAL_ES.md): perfiles para edades y estilos, tres ejemplos (personas, animales y vehículos), candidatos comparables, revisión local y maquetación en español.
