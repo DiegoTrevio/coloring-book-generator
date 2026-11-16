@@ -1,4 +1,4 @@
-"""OpenAI Images API wrapper: generate and edit images."""
+"""Image providers for generation and optional image editing."""
 from __future__ import annotations
 
 import base64
@@ -128,3 +128,64 @@ class ImageGenerator:
         except Exception as exc:
             log.error("edit failed for %s: %s", dest.name, exc)
             return False
+
+
+class SchnellGenerator:
+    """Replicate FLUX.1 Schnell adapter. Text-to-image only; no reference edits."""
+
+    model = "black-forest-labs/flux-schnell"
+    supports_edits = False
+
+    def __init__(self, client, aspect_ratio: str = "3:4") -> None:
+        self.client = client
+        self.aspect_ratio = aspect_ratio
+
+    def generate(
+        self, prompt: str, dest: Path,
+        qa_flags: Optional[list[str]] = None,
+        attempt: int = 0, max_attempts: int = 4,
+    ) -> bool:
+        corrections = "  ".join(
+            _QA_CORRECTIONS[f] for f in (qa_flags or []) if f in _QA_CORRECTIONS
+        )
+        full_prompt = prompt
+        if corrections:
+            full_prompt += "\n\nIMPORTANT CORRECTIONS: " + corrections
+
+        # Only model requests are retried. A file download failure must not
+        # silently trigger another billable image generation.
+        @retry_with_backoff(max_attempts=max_attempts)
+        def _predict():
+            return self.client.run(self.model, input={
+                "prompt": full_prompt,
+                "aspect_ratio": self.aspect_ratio,
+                "num_outputs": 1,
+                "num_inference_steps": 4,
+                "output_format": "png",
+            })
+
+        try:
+            output = _predict()
+            if not output:
+                raise RuntimeError("Replicate returned no images")
+            item = output[0]
+            # Current SDK returns FileOutput; older releases returned URLs.
+            if hasattr(item, "read"):
+                image_bytes = item.read()
+            elif isinstance(item, str) and item.startswith("https://"):
+                with urllib.request.urlopen(item, timeout=60) as response:
+                    image_bytes = response.read()
+            else:
+                raise RuntimeError("Unsupported Replicate image response")
+            if not image_bytes:
+                raise RuntimeError("Replicate returned an empty image")
+            dest.write_bytes(image_bytes)
+            return True
+        except Exception as exc:
+            log.error("Schnell generation failed for %s: %s", dest.name, exc)
+            return False
+
+    def edit(self, source_path: Path, prompt: str, dest: Path,
+             max_attempts: int = 3) -> bool:
+        log.warning("Schnell does not support image editing; colored sample skipped")
+        return False
