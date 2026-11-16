@@ -1,3 +1,15 @@
+## Paquete para impresión
+
+El taller permite exportar interior, cubierta completa e informe técnico sin API. Consulta [la guía de impresión](IMPRESION_ES.md) para revisar el libro y usar las medidas de la calculadora oficial.
+
+## Abrir una ventana en Windows
+
+Haz doble clic en **abrir_libros.bat** para configurar libros, escribir escenas, generar con Replicate y abrir la galería de opciones. Consulta [la guía de la ventana](VENTANA_ES.md). La generación consume API; comprobar y seleccionar imágenes existentes no.
+
+## Libros de cualquier temática
+
+Consulta [la guía editorial](EDITORIAL_ES.md): perfiles para edades y estilos, tres ejemplos (personas, animales y vehículos), candidatos comparables, revisión local y maquetación en español.
+
 ## Usar FLUX.1 Schnell con Replicate
 
 Consulta [la guía en español](SCHNELL_ES.md) para instalar en Windows y generar un libro de 30 dibujos. Usa `--provider replicate`; requiere `REPLICATE_API_TOKEN`, sin clave de OpenAI.

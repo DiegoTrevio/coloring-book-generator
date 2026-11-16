@@ -1,0 +1,25 @@
+name: Book generator checks
+on:
+  pull_request:
+  push:
+    branches: [main, codex/editorial-multitema]
+permissions:
+  contents: read
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt pytest
+      - run: python -m pytest -q

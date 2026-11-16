@@ -13,3 +13,5 @@ htmlcov/
 output/
 .env.*
 !.env.example
+output-*/
+books/

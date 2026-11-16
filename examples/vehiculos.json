@@ -1,0 +1,24 @@
+{
+  "theme": "Vehículos en movimiento",
+  "subject": "vehicles",
+  "age": "6-8",
+  "style": "friendly-cartoon",
+  "language": "es",
+  "candidates": 3,
+  "fit_art": true,
+  "captions": true,
+  "completion_page": true,
+  "labels": {
+    "1": "Auto",
+    "2": "Tren",
+    "3": "Avión",
+    "4": "Barco",
+    "5": "Tractor",
+    "6": "Autobús",
+    "7": "Camión",
+    "8": "Helicóptero",
+    "9": "Bicicleta",
+    "10": "Excavadora"
+  },
+  "art_direction": "One main subject per scene, two or three large secondary elements. Consistent rounded proportions and clean medium-bold outlines. No miniature decorations."
+}

@@ -13,62 +13,39 @@ log = logging.getLogger("kdp")
 
 # ── "This Book Belongs To" page ───────────────────────────────────────────────
 
-_FONT_PATHS = [
-    r"C:\Windows\Fonts\georgia.ttf",
-    r"C:\Windows\Fonts\arial.ttf",
-    r"C:\Windows\Fonts\calibri.ttf",
-    r"C:\Windows\Fonts\times.ttf",
-]
+from .typography import centered
 
 
-def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for fp in _FONT_PATHS:
-        try:
-            return ImageFont.truetype(fp, size)
-        except (OSError, IOError):
-            continue
-    return ImageFont.load_default()
+def _decorated_page(scratch_dir: Path, language="en", completion=False, title="") -> Path:
+    img = Image.new("L", (PAGE_W_PX, PAGE_H_PX), 255)
+    draw = ImageDraw.Draw(img)
+    draw.rounded_rectangle((180, 180, PAGE_W_PX-180, PAGE_H_PX-180),
+                           radius=85, outline=0, width=7)
+    draw.rounded_rectangle((215, 215, PAGE_W_PX-215, PAGE_H_PX-215),
+                           radius=65, outline=0, width=3)
+    # Theme-neutral circles can also be colored in.
+    for x in (380, 650, 920, 1190, 1460, 1730, 2000):
+        draw.ellipse((x, 440, x+120, 560), outline=0, width=5)
+    if completion:
+        heading = "¡Terminaste tu libro!" if language == "es" else "You finished your book!"
+        subtitle = "Reconocimiento a tu creatividad" if language == "es" else "Celebrating your creativity"
+    else:
+        heading = "Este libro pertenece a" if language == "es" else "This book belongs to"
+        subtitle = title
+    centered(draw, heading, 900, PAGE_W_PX, size=120, max_width=2050)
+    if subtitle:
+        centered(draw, subtitle, 1130, PAGE_W_PX, size=65, max_width=1950)
+    centered(draw, "Nombre" if language == "es" else "Name", 1580, PAGE_W_PX, size=75)
+    draw.line((500, 1810, PAGE_W_PX-500, 1810), fill=0, width=5)
+    message = "¡Dale color a tu imaginación!" if language == "es" else "Let your imagination shine!"
+    centered(draw, message, 2600, PAGE_W_PX, size=65, max_width=1950)
+    out = scratch_dir / ("_completion_page.png" if completion else "_title_page.png")
+    img.save(out, format="PNG", dpi=(300, 300))
+    return out
 
 
 def _create_title_page(scratch_dir: Path) -> Path:
-    img = Image.new("L", (PAGE_W_PX, PAGE_H_PX), 255)
-    draw = ImageDraw.Draw(img)
-
-    font_title = _load_font(130)
-    font_sub   = _load_font(80)
-    font_line  = _load_font(70)
-
-    cx = PAGE_W_PX // 2
-    y  = PAGE_H_PX // 4
-
-    def centered_text(text: str, font: ImageFont.ImageFont | ImageFont.FreeTypeFont, y_pos: int) -> None:
-        bbox = draw.textbbox((0, 0), text, font=font)
-        tw   = bbox[2] - bbox[0]
-        draw.text((cx - tw // 2, y_pos), text, fill=0, font=font)
-
-    centered_text("This Book", font_title, y)
-    centered_text("Belongs To", font_title, y + 160)
-
-    # Decorative rule
-    rule_y = y + 380
-    draw.line([(250, rule_y), (PAGE_W_PX - 250, rule_y)], fill=0, width=4)
-
-    # Name line
-    name_y = rule_y + 60
-    centered_text("Name:", font_sub, name_y)
-    line_y = name_y + 110
-    draw.line([(350, line_y), (PAGE_W_PX - 350, line_y)], fill=0, width=3)
-
-    # Bottom decorative rule
-    draw.line(
-        [(250, PAGE_H_PX - 280), (PAGE_W_PX - 250, PAGE_H_PX - 280)],
-        fill=0, width=4,
-    )
-    centered_text("Happy Colouring!", font_line, PAGE_H_PX - 220)
-
-    out = scratch_dir / "_title_page.png"
-    img.save(out, format="PNG")
-    return out
+    return _decorated_page(scratch_dir)
 
 
 def _create_blank_page(scratch_dir: Path) -> Path:
@@ -89,6 +66,7 @@ def build_pdf(
     clean_dir: Path,
     output_path: Path,
     page_ideas_ordered: list[str],
+    *, language: str = "en", title: str = "", completion_page: bool = False,
 ) -> int:
     """
     Assemble the interior PDF.
@@ -99,26 +77,26 @@ def build_pdf(
     Returns total page count.
     """
     scratch = output_path.parent
-    title_page = _create_title_page(scratch)
+    scratch.mkdir(parents=True, exist_ok=True)
+    title_page = _decorated_page(scratch, language, title=title)
     blank_page = _create_blank_page(scratch)
 
     # Build ordered list of clean page paths
     drawing_pages: list[Path] = []
     for idea in page_ideas_ordered:
-        # Clean pages are named 01_slug.png; match by prefix number
-        num_str = idea.split("_")[0]  # e.g. "01"
-        matches = sorted(clean_dir.glob(f"{num_str}_*.png"))
-        if matches:
-            drawing_pages.append(matches[0])
-        else:
-            log.warning("No clean page found for %s — inserting blank", idea)
-            drawing_pages.append(blank_page)
+        path = clean_dir / idea
+        if not path.is_file():
+            raise FileNotFoundError(f"Missing drawing: {path}. Generate or select it before building the PDF.")
+        drawing_pages.append(path)
 
     # Compose final page list
     pages: list[Path] = [title_page, blank_page]
     for dp in drawing_pages:
         pages.append(dp)
         pages.append(blank_page)
+
+    if completion_page:
+        pages.extend([_decorated_page(scratch, language, completion=True), blank_page])
 
     total = len(pages)
     log.info("PDF pages: 2 (title+blank) + %d drawings × 2 = %d total", len(drawing_pages), total)
